@@ -5,7 +5,7 @@ chrome.socket.create('tcp', {}, function onSocketCreate(createInfo) {
   socketId = createInfo.socketId;
   chrome.socket.connect(socketId, '10.0.0.30', 6667, onConnected);
 });
-console.log("onConnected is done. ReadForever is next");
+//console.log("onConnected is done. ReadForever is next");
 
 function onConnected() {
   readForever();
@@ -21,7 +21,7 @@ function onConnected() {
     var dateread = new Date();
     console.log(dateread+": Wrote after USER/r/n");
     
-  write('JOIN #realtestchannel\r\n');
+  //write('JOIN #realtestchannel\r\n');
   
 })//end write
 }
@@ -53,14 +53,27 @@ function read() {
   });
 }//end read
 function readForever(readInfo){
-  
-  if(readInfo!==undefined)
+  if(readInfo!==undefined && readInfo.resultCode>0)
   {
     var dateread = new Date();
+    var servermsg = ab2str(readInfo.data);
     console.log(dateread + ab2str(readInfo.data));
     dataFromRead+=dateread.getTime()+ab2str(readInfo.data)+"/r/n";
+    //if trigger matches data, do stuff here. 
+    //if PING, PONG 
+    //TODO: figure out server name. 
+    if(servermsg.search("PING")!==-1)
+    {
+
+      write('PONG :'+'server.simoncion.net'+'\r\n');
+    }
+
+    //if MSG, respond
+
+    //if channel message =5 and last date spoken is >5 minutes ago, say something
+    //if msg !stfu x, be silent for x minutes. 
   }
   
-  chrome.socket.read(socketId, null, this.readForever.bind(this));
+  chrome.socket.read(socketId, null, readForever); //On Peter's advice changing this to just call itself
 
 }//end readForever
