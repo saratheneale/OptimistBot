@@ -1,9 +1,13 @@
 var socketId;
 var dataFromRead = "";
+var serverConnect = "chat.freenode.net";
+var ircPort = 6667;
+var serverName;
+var channelName ="#realtestchannel";
 
 chrome.socket.create('tcp', {}, function onSocketCreate(createInfo) {
   socketId = createInfo.socketId;
-  chrome.socket.connect(socketId, '10.0.0.30', 6667, onConnected);
+  chrome.socket.connect(socketId, serverConnect, ircPort, onConnected);
 });
 //console.log("onConnected is done. ReadForever is next");
 
@@ -11,15 +15,15 @@ function onConnected() {
   readForever();
   console.log(socketId);
   read();
-  write('PASS none\r\n');
-  write('NICK OptimistBot\r\n');
-  write('USER USER 0 * :Real Name\r\n', function() {
+  write('PASS none');
+  write('NICK OptimistBot');
+  write('USER USER 0 * :Real Name', function() {
     //wait for a sign that we're registered before joining.
     //Welcome to the Internet Relay Network -RPL_WELCOME via IRC RFCs
     //socket.listen is not  an option for client side connections. let's try reading until we get what we want
     var welcomeMsg="";
     var dateread = new Date();
-    console.log(dateread+": Wrote after USER/r/n");
+    console.log(dateread+": Wrote after USER\r\n");
     
   //write('JOIN #realtestchannel\r\n');
   
@@ -27,6 +31,8 @@ function onConnected() {
 }
 
 function write(s, f) {
+  s+="\r\n";
+  console.log(s);
   chrome.socket.write(socketId, str2ab(s), function(good) {console.log('write was ', good); if (f) f();});
 }
 
@@ -60,12 +66,25 @@ function readForever(readInfo){
     console.log(dateread + ab2str(readInfo.data));
     dataFromRead+=dateread.getTime()+ab2str(readInfo.data)+"/r/n";
     //if trigger matches data, do stuff here. 
-    //if PING, PONG 
-    //TODO: figure out server name. 
-    if(servermsg.search("PING")!==-1)
+ 
+    //get server name
+    if(!serverName)
     {
-
-      write('PONG :'+'server.simoncion.net'+'\r\n');
+      serverName = servermsg.substring(1,servermsg.search(' '));
+    }
+    //if we get the welcome msg, join channel
+    if (servermsg.search("001 OptimistBot :")!=-1)
+    {
+      console.log(servermsg.search("001 OptimistBot :"));
+      write('JOIN '+channelName);
+    } 
+    //if PING, PONG 
+    if(servermsg.search("PING :")===0) //todo, only do this if its from server. not said in privmsg or channel. 
+    {
+      if(serverName)
+      {
+        write('PONG :'+serverName);
+      }
     }
 
     //if MSG, respond
