@@ -22,12 +22,11 @@ function onConnected() {
     //Welcome to the Internet Relay Network -RPL_WELCOME via IRC RFCs
     //socket.listen is not  an option for client side connections. let's try reading until we get what we want
     var welcomeMsg="";
-    var dateread = new Date();
-    console.log(dateread+": Wrote after USER\r\n");
+    var dateRead = new Date();
+    console.log(dateRead+": Wrote after USER\r\n");
 
-  //write('JOIN #realtestchannel\r\n');
-
-})//end write
+    //write('JOIN #realtestchannel\r\n');
+  })//end write
 }
 
 function write(s, f) {
@@ -52,35 +51,36 @@ function ab2str(buf) {
 function read() {
   chrome.socket.read(socketId, null, function(readInfo) {
     if (readInfo.resultCode > 0) {
-      var dateread = new Date();
-      console.log(dateread + ab2str(readInfo.data));
-      dataFromRead+=dateread.getTime()+ab2str(readInfo.data)+"/r/n";
+      var dateRead = new Date();
+      console.log(dateRead + ab2str(readInfo.data));
+      dataFromRead+=dateRead.getTime()+ab2str(readInfo.data)+"/r/n";
     }
   });
 
 }//end read
+
 function readForever(readInfo){
   if(readInfo!==undefined && readInfo.resultCode>0)
   {
-    var dateread = new Date();
-    var servermsg = ab2str(readInfo.data);
-    console.log(dateread + ab2str(readInfo.data));
-    dataFromRead+=dateread.getTime()+ab2str(readInfo.data)+"/r/n";
+    var dateRead = new Date();
+    var serverMsg = ab2str(readInfo.data);
+    console.log(dateRead + ab2str(readInfo.data));
+    dataFromRead+=dateRead.getTime()+ab2str(readInfo.data)+"/r/n";
     //if trigger matches data, do stuff here.
 
     //get server name
     if(!serverName)
     {
-      serverName = servermsg.substring(1,servermsg.search(' '));
+      serverName = serverMsg.substring(1,serverMsg.search(' '));
     }
     //if we get the welcome msg, join channel
-    if (servermsg.search("001 OptimistBot :")!=-1)
+    if (serverMsg.search("001 OptimistBot :")!=-1)
     {
-      console.log(servermsg.search("001 OptimistBot :"));
+      console.log(serverMsg.search("001 OptimistBot :"));
       write('JOIN '+channelName);
     }
     //if PING, PONG
-    if(servermsg.search("PING :")===0) //todo, only do this if its from server. not said in privmsg or channel.
+    if(serverMsg.search("PING :")===0) //todo, only do this if its from server. not said in privmsg or channel.
     {
       if(serverName)
       {
