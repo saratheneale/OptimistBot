@@ -84,6 +84,7 @@ function write(s, f)
     var dateObj = new Date();
     if (dateObj.getTime()-timeOfLastChanMsg.getTime()>silentTimeMin*60000)
     {
+      displayLineToScreen("[sent] " + s);
       chrome.socket.write(socketId, str2ab(s), function(good) {console.log('write was ', good); if (f) f();});
       timeOfLastChanMsg.setTime(dateObj.getTime());
     }
@@ -98,9 +99,11 @@ function write(s, f)
     }
   }
   else
+  {
+    displayLineToScreen("[sent] " + s);
     chrome.socket.write(socketId, str2ab(s), function(good) {console.log('write was ', good); if (f) f();});
-
-}
+  }
+}//end write
 
 function str2ab(str)
 {
@@ -124,7 +127,7 @@ function read()
     if (readInfo.resultCode > 0) {
       var dateRead = new Date();
       console.log(dateRead + ab2str(readInfo.data));
-      dataFromRead+=dateRead.getTime()+ab2str(readInfo.data)+"/r/n";
+      dataFromRead+=dateRead.getTime()+ab2str(readInfo.data)+"/n";
     }
   });
 
@@ -142,8 +145,10 @@ function readForever(readInfo)
   {
     var dateRead = new Date();
     var serverMsg = ab2str(readInfo.data);
-    console.log(dateRead + ab2str(readInfo.data));
-    dataFromRead+=dateRead.getTime()+ab2str(readInfo.data)+"/r/n";
+    console.log(dateRead + serverMsg);
+    // warning: this is a space leak. the longer the bot is connected, the
+    // bigger this string will be
+    dataFromRead+=dateRead.getTime()+serverMsg+"/n";
     //if trigger matches data, do stuff here.
 
     var serverLines = [];
@@ -160,6 +165,12 @@ function readForever(readInfo)
         serverMessages.push(msg);
       }
     }
+
+    var messageLines = serverMsg.trim().replace(/\r/g, '').split('\n');
+    for (var i = 0; i < messageLines.length; i++)
+    {
+      displayLineToScreen(messageLines[i]);
+		}
 
     //get server name
     if(!serverName)
@@ -179,6 +190,7 @@ function readForever(readInfo)
           break;
         case "PING":
 					write("PONG :"+serverName);
+					displayLineToScreen('[SERVER PONG]');
           break;
         case "PRIVMSG":
           handlePrivmsg(m);
@@ -252,3 +264,27 @@ function handlePrivmsg(message) {
 		write("PRIVMSG " + messagingUser + " :I LIKE RAINBOWS!?");
 	}
 }
+
+function displayLineToScreen(text)
+{
+  var p = document.createElement('pre');
+  p.textContent = text;
+  var container = document.getElementById('recent-chat-display');
+  container.appendChild(p);
+  while (container.childNodes.length > 15)
+  {
+    container.childNodes[0].remove();
+  }
+}
+
+var inputElement = document.getElementById('typing');
+inputElement.addEventListener('keydown', function (event)
+{
+  // if the user pushed the enter key while typing a message (13 is enter):
+  if (event.keyCode === 13)
+  {
+    var message = inputElement.value;
+    inputElement.value = "";
+    write("PRIVMSG " + channelName + " :" + message);
+  }
+})
