@@ -1,23 +1,31 @@
 var socketId;
 var dataFromRead = "";
-var serverConnect = "chat.freenode.net";
+var serverConnect = "10.0.1.28";
 var ircPort = 6667;
 var serverName;
 var channelName ="#realtestchannel";
 
-chrome.socket.create('tcp', {}, function onSocketCreate(createInfo) {
-  socketId = createInfo.socketId;
-  chrome.socket.connect(socketId, serverConnect, ircPort, onConnected);
-});
-//console.log("onConnected is done. ReadForever is next");
+var userName;
+chrome.storage.local.get('userName', function(results)
+{
+  userName = results.userName || 'OptimistBot';
+
+  chrome.socket.create('tcp', {}, function onSocketCreate(createInfo)
+  {
+    socketId = createInfo.socketId;
+    chrome.socket.connect(socketId, serverConnect, ircPort, onConnected);
+  }); // end socket.create
+}); // end get userName from storage
+
 
 function onConnected()
 {
+  document.getElementById('connectionStatus').textContent = "connected!";
   readForever();
   console.log(socketId);
   read();
   write('PASS none');
-  write('NICK OptimistBot');
+  write('NICK ' + userName);
   write('USER USER 0 * :Real Name', function()
   {
     //wait for a sign that we're registered before joining.
@@ -29,7 +37,13 @@ function onConnected()
 
     //write('JOIN #realtestchannel\r\n');
   })//end write
-}
+} // end onConnected
+
+function onDisconnected()
+{
+  document.getElementById('connectionStatus').textContent = "disconnected :(";
+  chrome.socket.disconnect(socketId);
+} // end onDisconnected
 
 function write(s, f) {
   s+="\r\n";
@@ -67,7 +81,13 @@ function read()
 
 function readForever(readInfo)
 {
-  if(readInfo!==undefined && readInfo.resultCode>0)
+  if(readInfo!==undefined && readInfo.resultCode <= 0)
+  {
+    // we've been disconnected, dang.
+    onDisconnected();
+    return;
+  }
+  if (readInfo !== undefined)
   {
     var dateRead = new Date();
     var serverMsg = ab2str(readInfo.data);
@@ -81,9 +101,9 @@ function readForever(readInfo)
       serverName = serverMsg.substring(1,serverMsg.search(' '));
     }
     //if we get the welcome msg, join channel
-    if (serverMsg.search("001 OptimistBot :")!=-1)
+    if (serverMsg.search("001 " + userName + " :")!=-1)
     {
-      console.log(serverMsg.search("001 OptimistBot :"));
+      console.log(serverMsg.search("001 " + userName + " :"));
       write('JOIN '+channelName);
     }
     //if PING, PONG
@@ -102,5 +122,13 @@ function readForever(readInfo)
   }
 
   chrome.socket.read(socketId, null, readForever); //On Peter's advice changing this to just call itself
-
 }//end readForever
+
+
+
+function setUserName(newUserName, optionalCallback)
+{
+  chrome.storage.local.set({userName: newUserName}, optionalCallback);
+} // end setUserName
+
+
