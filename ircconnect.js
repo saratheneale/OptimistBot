@@ -30,6 +30,7 @@ chrome.storage.local.get('userName', function(results)
 
 function onConnected()
 {
+  document.getElementById('connectionStatus').textContent = "connected!";
   readForever();
   console.log(socketId);
   read();
@@ -46,7 +47,13 @@ function onConnected()
 
     //write('JOIN #realtestchannel\r\n');
   })//end write
-}
+} // end onConnected
+
+function onDisconnected()
+{
+  document.getElementById('connectionStatus').textContent = "disconnected :(";
+  chrome.socket.disconnect(socketId);
+} // end onDisconnected
 
 function write(s, f) {
   s+="\r\n";
@@ -84,7 +91,13 @@ function read()
 
 function readForever(readInfo)
 {
-  if(readInfo!==undefined && readInfo.resultCode>0)
+  if(readInfo!==undefined && readInfo.resultCode <= 0)
+  {
+    // we've been disconnected, dang.
+    onDisconnected();
+    return;
+  }
+  if (readInfo !== undefined)
   {
     var dateRead = new Date();
     var serverMsg = ab2str(readInfo.data);
@@ -145,7 +158,6 @@ function readForever(readInfo)
   }
 
   chrome.socket.read(socketId, null, readForever); //On Peter's advice changing this to just call itself
-
 }//end readForever
 
 
