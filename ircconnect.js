@@ -170,7 +170,7 @@ function readForever(readInfo)
     for(var i = 0; i < serverMessages.length; ++i)
     {
       var m = serverMessages[i];
-			console.log(m);
+			console.log(m.command, m);
       switch(m.command)
       {
         //Welcome message!
@@ -178,12 +178,7 @@ function readForever(readInfo)
           write('JOIN ' + channelName);
           break;
         case "PING":
-          //We need to eat the leading colon.
-					//FIXME: Do this fixup elsewhere.
-          if(m.username.slice(1) === serverName)
-          {
-            write("PONG :"+serverName);
-          }
+					write("PONG :"+serverName);
           break;
         case "PRIVMSG":
           handlePrivmsg(m);
