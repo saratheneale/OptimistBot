@@ -5,7 +5,17 @@ var ircPort = 6667;
 var serverName;
 var channelName ="#realtestchannel";
 
+setUserName("LakinBot");
+
 var userName;
+
+function IrcCommand() {
+  this.prefix = "";
+  this.command = "";
+  this.username = "";
+  this.args = [];
+}
+
 chrome.storage.local.get('userName', function(results)
 {
   userName = results.userName || 'OptimistBot';
@@ -82,23 +92,49 @@ function readForever(readInfo)
     dataFromRead+=dateRead.getTime()+ab2str(readInfo.data)+"/r/n";
     //if trigger matches data, do stuff here.
 
+    var serverLines = [];
+    var serverMessages = [];
+    serverLines = serverMsg.split("\n");
+
+    //Split the server messages into single lines.
+    for(var i = 0; i < serverLines.length; i++)
+    {
+      //If the line wasn't empty, save the message.
+      var msg = crackMessage(serverLines[i]);
+      if(msg !== undefined)
+      {
+        serverMessages.push(msg);
+      }
+    }
+
     //get server name
     if(!serverName)
     {
       serverName = serverMsg.substring(1,serverMsg.search(' '));
     }
-    //if we get the welcome msg, join channel
-    if (serverMsg.search("001 " + userName + " :")!=-1)
+
+    for(var i = 0; i < serverMessages.length; ++i)
     {
-      console.log(serverMsg.search("001 " + userName + " :"));
-      write('JOIN '+channelName);
-    }
-    //if PING, PONG
-    if(serverMsg.search("PING :")===0) //todo, only do this if its from server. not said in privmsg or channel.
-    {
-      if(serverName)
+      var m = serverMessages[i];
+      switch(m.command)
       {
-        write('PONG :'+serverName);
+        //Welcome message!
+        case "001":
+          write('JOIN ' + channelName);
+          break;
+        case "PING":
+          //FIXME: For now, we need to eat the leading colon.
+          if(m.username.slice(1) === serverName)
+          {
+            write("PONG :"+serverName);
+          }
+          break;
+        case "PRIVMSG":
+          handlePrivmsg(m);
+          break;
+        default:
+          //console.log("WARN: Unhandled message: ", m);
+          break;
       }
     }
 
@@ -118,3 +154,29 @@ function setUserName(newUserName, optionalCallback)
 {
   chrome.storage.local.set({userName: newUserName}, optionalCallback);
 } // end setUserName
+
+//Converts a single message from an IRC server into an IrcCommand object.
+function crackMessage(serverLine) {
+  if(serverLine.length == 0)
+  {
+    return undefined;
+  }
+  var r = new IrcCommand();
+  var parts = serverLine.split(" ");
+  var offset = 0;
+
+  //If our message had a prefix, store it.
+  if(parts[0][0] == ":" )
+  {
+    r.prefix = parts[0];
+    offset = 1;
+  }
+  r.command = parts[0+offset];
+  r.username = parts[1+offset];
+  r.args = parts.slice(2+offset);
+  return r;
+}
+
+function handlePrivmsg(message) {
+  ;
+}
