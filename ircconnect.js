@@ -5,8 +5,6 @@ var ircPort = 6667;
 var serverName;
 var channelName ="#realtestchannel";
 
-setUserName("LakinBot");
-
 var userName;
 
 function IrcCommand() {
@@ -129,6 +127,7 @@ function readForever(readInfo)
     for(var i = 0; i < serverMessages.length; ++i)
     {
       var m = serverMessages[i];
+			console.log(m);
       switch(m.command)
       {
         //Welcome message!
@@ -136,7 +135,8 @@ function readForever(readInfo)
           write('JOIN ' + channelName);
           break;
         case "PING":
-          //FIXME: For now, we need to eat the leading colon.
+          //We need to eat the leading colon.
+					//FIXME: Do this fixup elsewhere.
           if(m.username.slice(1) === serverName)
           {
             write("PONG :"+serverName);
@@ -146,6 +146,7 @@ function readForever(readInfo)
           handlePrivmsg(m);
           break;
         default:
+					//All this spew is a bit annoying.
           //console.log("WARN: Unhandled message: ", m);
           break;
       }
@@ -159,8 +160,6 @@ function readForever(readInfo)
 
   chrome.socket.read(socketId, null, readForever); //On Peter's advice changing this to just call itself
 }//end readForever
-
-
 
 function setUserName(newUserName, optionalCallback)
 {
@@ -190,5 +189,28 @@ function crackMessage(serverLine) {
 }
 
 function handlePrivmsg(message) {
-  ;
+	//This is a message to the channel:
+	if(message.username === channelName)
+	{
+		for(var i = 0; i < message.args.length; ++i)
+		{
+			var arg = message.args[i];
+			//Slice off the colon from the first arg.
+			//FIXME: We should do this fixup elsewhere.
+			if(i === 0)
+			{
+				arg = arg.substring(1);
+			}
+			if(arg.search(userName) != -1)
+			{
+				write("PRIVMSG " + channelName + " :I LIKE RAINBOWS?");
+			}
+		}
+	}
+	//If not, it must be a message to me.
+	else
+	{
+		var messagingUser = message.prefix.slice(1, message.prefix.search("!"));
+		write("PRIVMSG " + messagingUser + " :I LIKE RAINBOWS!?");
+	}
 }
