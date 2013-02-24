@@ -24,6 +24,14 @@ var goodVibes = ["Great job team!","Wow! I can't believe how much headway we're 
 ];
 
 var userName;
+
+function IrcCommand() {
+  this.prefix = "";
+  this.command = "";
+  this.username = "";
+  this.args = [];
+}
+
 chrome.storage.local.get('userName', function(results)
 {
   userName = results.userName || 'OptimistBot';
@@ -143,30 +151,54 @@ function readForever(readInfo)
     dataFromRead+=dateRead.getTime()+serverMsg+"/n";
     //if trigger matches data, do stuff here.
 
+    var serverLines = [];
+    var serverMessages = [];
+    serverLines = serverMsg.split("\n");
+
+    //Split the server messages into single lines.
+    for(var i = 0; i < serverLines.length; i++)
+    {
+      //If the line wasn't empty, save the message.
+      var msg = crackMessage(serverLines[i]);
+      if(msg !== undefined)
+      {
+        serverMessages.push(msg);
+      }
+    }
+
     var messageLines = serverMsg.trim().replace(/\r/g, '').split('\n');
     for (var i = 0; i < messageLines.length; i++)
     {
       displayLineToScreen(messageLines[i]);
-    }
+		}
 
     //get server name
     if(!serverName)
     {
       serverName = serverMsg.substring(1,serverMsg.search(' '));
     }
-    //if we get the welcome msg, join channel
-    if (serverMsg.search("001 " + userName + " :")!=-1)
+
+    for(var i = 0; i < serverMessages.length; ++i)
     {
-      console.log(serverMsg.search("001 " + userName + " :"));
-      write('JOIN '+channelName);
-    }
-    //if PING, PONG
-    if(serverMsg.search("PING :")===0) //todo, only do this if its from server. not said in privmsg or channel.
-    {
-      if(serverName)
+      var m = serverMessages[i];
+			console.log(m.command, m);
+      switch(m.command)
       {
-        write('PONG :'+serverName);
-        displayLineToScreen('[SERVER PONG]')
+        //Welcome message!
+        case "001":
+          write('JOIN ' + channelName);
+          break;
+        case "PING":
+					write("PONG :"+serverName);
+					displayLineToScreen('[SERVER PONG]');
+          break;
+        case "PRIVMSG":
+          handlePrivmsg(m);
+          break;
+        default:
+					//All this spew is a bit annoying.
+          //console.log("WARN: Unhandled message: ", m);
+          break;
       }
     }
 
@@ -179,13 +211,59 @@ function readForever(readInfo)
   chrome.socket.read(socketId, null, readForever); //On Peter's advice changing this to just call itself
 }//end readForever
 
-
-
 function setUserName(newUserName, optionalCallback)
 {
   chrome.storage.local.set({userName: newUserName}, optionalCallback);
 } // end setUserName
 
+//Converts a single message from an IRC server into an IrcCommand object.
+function crackMessage(serverLine) {
+  if(serverLine.length == 0)
+  {
+    return undefined;
+  }
+  var r = new IrcCommand();
+  var parts = serverLine.split(" ");
+  var offset = 0;
+
+  //If our message had a prefix, store it.
+  if(parts[0][0] == ":" )
+  {
+    r.prefix = parts[0];
+    offset = 1;
+  }
+  r.command = parts[0+offset];
+  r.username = parts[1+offset];
+  r.args = parts.slice(2+offset);
+  return r;
+}
+
+function handlePrivmsg(message) {
+	//This is a message to the channel:
+	if(message.username === channelName)
+	{
+		for(var i = 0; i < message.args.length; ++i)
+		{
+			var arg = message.args[i];
+			//Slice off the colon from the first arg.
+			//FIXME: We should do this fixup elsewhere.
+			if(i === 0)
+			{
+				arg = arg.substring(1);
+			}
+			if(arg.search(userName) != -1)
+			{
+				write("PRIVMSG " + channelName + " :I LIKE RAINBOWS?");
+			}
+		}
+	}
+	//If not, it must be a message to me.
+	else
+	{
+		var messagingUser = message.prefix.slice(1, message.prefix.search("!"));
+		write("PRIVMSG " + messagingUser + " :I LIKE RAINBOWS!?");
+	}
+}
 
 function displayLineToScreen(text)
 {
