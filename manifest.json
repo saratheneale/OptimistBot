@@ -4,7 +4,7 @@
   "version": "0.1",
   "app": {
     "background": {
-      "scripts": ["ircconnect.js"]
+      "scripts": ["background.js"]
     }
   },
   "permissions": [
