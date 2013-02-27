@@ -1,6 +1,6 @@
 {
-  "name": "Hello World!",
-  "description": "My first packaged app.",
+  "name": "OptimistBot!",
+  "description": "My first packaged app. An IRC bot that brings positive collaboration to channels",
   "version": "0.1",
   "app": {
     "background": {

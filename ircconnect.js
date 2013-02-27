@@ -1,26 +1,26 @@
 var socketId;
-var dataFromRead = "";
-var serverConnect = "10.0.1.28";
+//var dataFromRead = "";
+var serverConnect = "10.0.0.30";
 var ircPort = 6667;
 var serverName;
 var channelName ="#realtestchannel";
 var timeOfLastChanMsg = new Date();
 timeOfLastChanMsg.setTime(1); //initialize the time to 1. 
-var silentTimeMin=.5;
+var silentTimeMin=.1;
 
 
 //OptimistBot Sayings
 var goodVibes = ["Great job team!","Wow! I can't believe how much headway we're making!",
-"That's a great point! Let's explore this perspective with bit more dicussion. ",
+"That's a great point, $user! Let's explore this perspective with bit more dicussion. ",
 "Keep up the great work team! This discussion is fascinating!",
-"This is very encouraging. We are reaching our goals by talking things out.",
+"This is very encouraging, $user. We are reaching our goals by talking things out.",
 "All of these are great ideas! Let's keep going and get everyone's contribution.",
 "Congratulations team! Great work so far!",
-"Thanks for mentioning that. That's a perspective I've never thought about before.",
-"All right! Fantastic point!",
+"Thanks for mentioning that, $user. That's a perspective I've never thought about before.",
+"All right! Fantastic point, $user!",
 "Just wanted to throw in my two cents- you're all doing a dynamite job here!",
 "That's one thing I love about this channel- the truly diverse ideas being discussed. Great job!",
-"I like that. Let's brainstorm some more on this idea.",
+"$user, I like that. Let's all brainstorm some more on this idea.",
 ];
 
 var userName;
@@ -30,10 +30,12 @@ function IrcCommand() {
   this.command = "";
   this.username = "";
   this.args = [];
+  this.msgSender=""; //if command is PRIVMSG, we'll populate this 
 }
 
 chrome.storage.local.get('userName', function(results)
 {
+  console.log("We're in chrome.storage.local.get");
   userName = results.userName || 'OptimistBot';
 
   chrome.socket.create('tcp', {}, function onSocketCreate(createInfo)
@@ -46,6 +48,7 @@ chrome.storage.local.get('userName', function(results)
 
 function onConnected()
 {
+  console.log("We're in onConnected");
   document.getElementById('connectionStatus').textContent = "connected!";
   readForever();
   console.log(socketId);
@@ -80,7 +83,7 @@ function write(s, f)
 
   if (s.search("PRIVMSG "+channelName)>-1)
    {
-    //should we write this?
+    //Spam Protection. We don't want to spam the channel. 
     var dateObj = new Date();
     if (dateObj.getTime()-timeOfLastChanMsg.getTime()>silentTimeMin*60000)
     {
@@ -90,6 +93,7 @@ function write(s, f)
     }
     else
     {
+      displayLineToScreen("[Spam?] You don't get to write because you messaged the channel already. " + dateObj.getTime());
       console.log("You don't get to write because you messaged the channel already. dateObj.getTime: ")
       console.log(dateObj.getTime());
       console.log("Time of timeOfLastChanMsg")
@@ -127,7 +131,7 @@ function read()
     if (readInfo.resultCode > 0) {
       var dateRead = new Date();
       console.log(dateRead + ab2str(readInfo.data));
-      dataFromRead+=dateRead.getTime()+ab2str(readInfo.data)+"/n";
+      //dataFromRead+=dateRead.getTime()+ab2str(readInfo.data)+"/n";
     }
   });
 
@@ -139,6 +143,7 @@ function readForever(readInfo)
   {
     // we've been disconnected, dang.
     onDisconnected();
+    console.log(readInfo.resultCode);
     return;
   }
   if (readInfo !== undefined)
@@ -148,7 +153,7 @@ function readForever(readInfo)
     console.log(dateRead + serverMsg);
     // warning: this is a space leak. the longer the bot is connected, the
     // bigger this string will be
-    dataFromRead+=dateRead.getTime()+serverMsg+"/n";
+   // dataFromRead+=dateRead.getTime()+serverMsg+"/n";
     //if trigger matches data, do stuff here.
 
     var serverLines = [];
@@ -173,9 +178,10 @@ function readForever(readInfo)
     }
 
     //get server name
+    //the server sends :servername. I start the substring at 1 instead of 0 to take this into account.
     if(!serverName)
     {
-      serverName = serverMsg.substring(1,serverMsg.search(' '));
+      serverName = serverMsg.substring(1,serverMsg.search(' ')); //IRC server msg is of the for ":servername msg", so search for first instance of space as the end of the servername.
     }
 
     for(var i = 0; i < serverMessages.length; ++i)
@@ -194,6 +200,7 @@ function readForever(readInfo)
           break;
         case "PRIVMSG":
           handlePrivmsg(m);
+          console.log(m.msgSender);
           break;
         default:
           //All this spew is a bit annoying.
@@ -251,9 +258,25 @@ function handlePrivmsg(message) {
       {
         arg = arg.substring(1);
       }
-      if(arg.search(userName) != -1)
+      //TODO: OptimistBot should say random things every minute
+      //      OptimistBot should mention user's name when another user mentions him. 
+      if(arg.search(userName) != -1) 
       {
-        write("PRIVMSG " + channelName + " :I LIKE RAINBOWS?");
+        //find out who sent it:
+        var msgPrefix = message.prefix;
+        //console.log(message.prefix+"Prefix <---");        console.log(message.command);        console.log(message.args);
+        var msgSenderEnd=msgPrefix.search('!'); //IRC protocol is ":username!user@server CMD username msg". Hence, search for !~
+      //  console.log("msgSenderEnd: "+msgSenderEnd);
+        var msgSender = msgPrefix.substring(1,msgSenderEnd);
+      //  console.log(msgSender);
+        message.msgSender=msgSender;
+      //  console.log(message.msgSender+" that was the message.msgSender");
+        //grab a random thing to say
+        var max = goodVibes.length;
+        var min = 0;
+        var randomGoodVibe=Math.floor(Math.random()*(max-min+1)-min);
+        console.log(msgSender);
+        write("PRIVMSG " + channelName + " :"+goodVibes[randomGoodVibe]+" "+msgSender);
       }
     }
   }
