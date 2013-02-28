@@ -1,6 +1,6 @@
 var socketId;
 //var dataFromRead = "";
-var serverConnect = "10.0.0.30";
+var serverConnect = "chat.freenode.com";
 var ircPort = 6667;
 var serverName;
 var channelName ="#realtestchannel";
@@ -10,11 +10,12 @@ var silentTimeMin=.1;
 
 
 //OptimistBot Sayings
-var goodVibes = ["Great job team!","Wow! I can't believe how much headway we're making!",
+var goodVibes = ["Great job team!",
+"Wow! I can't believe how much headway we're making!",
 "That's a great point, $user! Let's explore this perspective with bit more dicussion. ",
 "Keep up the great work team! This discussion is fascinating!",
 "This is very encouraging, $user. We are reaching our goals by talking things out.",
-"All of these are great ideas! Let's keep going and get everyone's contribution.",
+"All of these are great ideas! Let's grab everyone's contributions.",
 "Congratulations team! Great work so far!",
 "Thanks for mentioning that, $user. That's a perspective I've never thought about before.",
 "All right! Fantastic point, $user!",
@@ -62,9 +63,6 @@ function onConnected()
     //socket.listen is not  an option for client side connections. let's try reading until we get what we want
     var welcomeMsg="";
     var dateRead = new Date();
-    console.log(dateRead+": Wrote after USER\r\n");
-
-    //write('JOIN #realtestchannel\r\n');
   })//end write
 } // end onConnected
 
@@ -272,11 +270,8 @@ function handlePrivmsg(message) {
         message.msgSender=msgSender;
       //  console.log(message.msgSender+" that was the message.msgSender");
         //grab a random thing to say
-        var max = goodVibes.length;
-        var min = 0;
-        var randomGoodVibe=Math.floor(Math.random()*(max-min+1)-min);
-        console.log(msgSender);
-        write("PRIVMSG " + channelName + " :"+goodVibes[randomGoodVibe]+" "+msgSender);
+        var strRandomGoodVibe = getRandomGoodVibe(msgSender); 
+        write("PRIVMSG " + channelName + " :"+strRandomGoodVibe);
       }
     }
   }
@@ -286,6 +281,24 @@ function handlePrivmsg(message) {
     var messagingUser = message.prefix.slice(1, message.prefix.search("!"));
     write("PRIVMSG " + messagingUser + " :I LIKE RAINBOWS!?");
   }
+}//end handlePrivMsg()
+
+//Function selects a Random Good Vibe and prepares it for writing. 
+//Function argument is user who sent message. 
+function getRandomGoodVibe(user){
+
+        //grab a random thing to say
+        var max = goodVibes.length;
+        var min = 0;
+        var indexGoodVibe=Math.floor(Math.random()*(max-min+1)-min);
+        //prepare the statement for sending
+        var strMsg = goodVibes[indexGoodVibe]
+        //replace $user with user var
+        if (strMsg.search("\\$user")!==-1)
+        {
+          strMsg=strMsg.replace("\$user",user,"gi")
+        }
+        return strMsg;
 }
 
 function displayLineToScreen(text)
