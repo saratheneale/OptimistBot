@@ -10,9 +10,9 @@ var silentTimeMin=.1;
 
 
 //OptimistBot Sayings
-var goodVibes = ["Great job team!",
+var goodVibes = ["Great job team!", "$channelName is like a synergy machine with all these great contributions!",
 "Wow! I can't believe how much headway we're making!",
-"That's a great point, $user! Let's explore this perspective with bit more dicussion. ",
+"That's a great point, $user! Let's explore this perspective with bit more discussion. ",
 "Keep up the great work team! This discussion is fascinating!",
 "This is very encouraging, $user. We are reaching our goals by talking things out.",
 "All of these are great ideas! Let's grab everyone's contributions.",
@@ -20,12 +20,13 @@ var goodVibes = ["Great job team!",
 "Thanks for mentioning that, $user. That's a perspective I've never thought about before.",
 "All right! Fantastic point, $user!",
 "Just wanted to throw in my two cents- you're all doing a dynamite job here!",
-"That's one thing I love about this channel- the truly diverse ideas being discussed. Great job!",
+"That's one thing I love about this channel- the truly diverse ideas being discussed. Great job everyone!",
 "$user, I like that. Let's all brainstorm some more on this idea.",
 ];
 
 var userName;
 
+//initiates an object
 function IrcCommand() {
   this.prefix = "";
   this.command = "";
@@ -34,18 +35,32 @@ function IrcCommand() {
   this.msgSender=""; //if command is PRIVMSG, we'll populate this 
 }
 
-chrome.storage.local.get('userName', function(results)
+function main()
 {
-  console.log("We're in chrome.storage.local.get");
-  userName = results.userName || 'OptimistBot';
-
-  chrome.socket.create('tcp', {}, function onSocketCreate(createInfo)
+    chrome.storage.local.get('userName', function(results)
   {
-    socketId = createInfo.socketId;
-    chrome.socket.connect(socketId, serverConnect, ircPort, onConnected);
-  }); // end socket.create
-}); // end get userName from storage
+    console.log("We're in chrome.storage.local.get");
+    userName = results.userName || 'OptimistBot';
 
+    chrome.socket.create('tcp', {}, function onSocketCreate(createInfo)
+    {
+      socketId = createInfo.socketId;
+      chrome.socket.connect(socketId, serverConnect, ircPort, onConnected);
+    }); // end socket.create
+  }); // end get userName from storage
+  
+  var inputElement = document.getElementById('typing');
+  inputElement.addEventListener('keydown', function (event)
+  {
+    // if the user pushed the enter key while typing a message (13 is enter):
+    if (event.keyCode === 13)
+    {
+      var message = inputElement.value;
+      inputElement.value = "";
+      write("PRIVMSG " + channelName + " :" + message);
+    }
+  })
+}//end main
 
 function onConnected()
 {
@@ -72,6 +87,7 @@ function onDisconnected()
   chrome.socket.disconnect(socketId);
 } // end onDisconnected
 
+//writes a message to the server. Argument is a string. The function automatically adds \r\n to the end of the message
 function write(s, f) 
 {
   s+="\r\n";
@@ -106,7 +122,7 @@ function write(s, f)
     chrome.socket.write(socketId, str2ab(s), function(good) {console.log('write was ', good); if (f) f();});
   }
 }//end write
-
+//Takes a string and turns it into an Array Buffer for pushing messages through sockets
 function str2ab(str)
 {
   var buf = new ArrayBuffer(str.length*1); // 1 byte for each char
@@ -117,7 +133,7 @@ function str2ab(str)
   }
   return buf;
 }
-
+//takes array buffer and turns it into string so the user can read it.
 function ab2str(buf)
 {
   return String.fromCharCode.apply(null, new Uint8Array(buf));
@@ -134,7 +150,8 @@ function read()
   });
 
 }//end read
-
+//function readForever - Reads messages from server
+//                        Also does the first processing of messages.
 function readForever(readInfo)
 {
   if(readInfo!==undefined && readInfo.resultCode <= 0)
@@ -242,7 +259,8 @@ function crackMessage(serverLine) {
   r.args = parts.slice(2+offset);
   return r;
 }
-
+//This function processes PRIVMSG from the IRC server. 
+//              It handles channel messages and direct messages.
 function handlePrivmsg(message) {
   //This is a message to the channel:
   if(message.username === channelName)
@@ -288,7 +306,7 @@ function handlePrivmsg(message) {
 function getRandomGoodVibe(user){
 
         //grab a random thing to say
-        var max = goodVibes.length;
+        var max = (goodVibes.length>0) ? (goodVibes.length-1) : (0); //prevent goodVibes.length from being -1
         var min = 0;
         var indexGoodVibe=Math.floor(Math.random()*(max-min+1)-min);
         //prepare the statement for sending
@@ -300,7 +318,7 @@ function getRandomGoodVibe(user){
         }
         return strMsg;
 }
-
+//Rough UI to see and write channel chats
 function displayLineToScreen(text)
 {
   var p = document.createElement('pre');
@@ -312,15 +330,9 @@ function displayLineToScreen(text)
     container.childNodes[0].remove();
   }
 }
-
-var inputElement = document.getElementById('typing');
-inputElement.addEventListener('keydown', function (event)
+if(window.chrome.socket)
 {
-  // if the user pushed the enter key while typing a message (13 is enter):
-  if (event.keyCode === 13)
-  {
-    var message = inputElement.value;
-    inputElement.value = "";
-    write("PRIVMSG " + channelName + " :" + message);
-  }
-})
+  debugger;
+  main();
+
+}
