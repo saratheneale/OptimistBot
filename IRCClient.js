@@ -41,7 +41,7 @@ IRCClient.prototype.IrcCommandParsed= function() {
 
 IRCClient.prototype.setUserName= function(newUserName, optionalCallback)
 {
-  userName=newUserName; //shouldn't this only be if its not taken?
+  this.userName=newUserName; //shouldn't this only be if its not taken?
   chrome.storage.local.set({userName: newUserName}, optionalCallback);
 } // end setUserName
 
@@ -55,7 +55,7 @@ IRCClient.prototype.onConnected= function()
   //should this go in another function?
 
   this.write('PASS none');
-  this.write('NICK ' + userName);
+  this.write('NICK ' + this.userName);
   this.write('USER USER 0 * :Real Name', function(){
    console.log("wrote pass, nick, and user user 0 *")
   })//end write
@@ -162,6 +162,13 @@ IRCClient.prototype.processReadInfo= function(readInfo)
         this.handlePrivmsg(m); 
         console.log(m.msgSender);
         break;
+       //case "433":
+       //Nickname already in use
+       //change name and try again
+       //case "403":
+       //no such channel. tell user to join another channel
+       //case "KICK":
+
        default:
         //All this spew is a bit annoying.
         //console.log("WARN: Unhandled message: ", m);

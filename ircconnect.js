@@ -27,13 +27,14 @@ bot.onMessage=function(message,arg){
 
 if(message.username===this.channelName)
 {
-  //handle channel messages here
-  var strRandomGoodVibe = this.getRandomGoodVibe(message.msgSender); 
-  this.write("PRIVMSG " + this.channelName + " :"+strRandomGoodVibe);
-      
-}
-else
-{
+  //Bot will respond once in a while to a channel message, 1/25 times
+  //Bot will respond if someone says his name
+  var ranNum = Math.random();
+  if(ranNum<.04 || arg.search(bot.userName)!==-1){
+    var strRandomGoodVibe = this.getRandomGoodVibe(message.msgSender); 
+    this.write("PRIVMSG " + this.channelName + " :"+strRandomGoodVibe);
+  } 
+} else{
   var messagingUser = message.prefix.slice(1, message.prefix.search("!"));
   this.write("PRIVMSG " + messagingUser + " :I LIKE RAINBOWS!?"); 
 }
